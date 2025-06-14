@@ -175,7 +175,7 @@ def run_task(processor, args):
             holes_are_tissue= not args.remove_holes,
             artifact_remover_model=artifact_remover_model,
             batch_size=args.seg_batch_size if args.seg_batch_size is not None else args.batch_size,
-            device=f'cuda:{args.gpu}',
+            device=args.device,
         )
     elif args.task == 'coords':
         processor.run_patching_job(
@@ -192,7 +192,7 @@ def run_task(processor, args):
             processor.run_patch_feature_extraction_job(
                 coords_dir=args.coords_dir or f'{args.mag}x_{args.patch_size}px_{args.overlap}px_overlap',
                 patch_encoder=encoder,
-                device=f'cuda:{args.gpu}',
+                device=args.device,
                 saveas='h5',
                 batch_limit=args.feat_batch_size if args.feat_batch_size is not None else args.batch_size,
             )
@@ -202,7 +202,7 @@ def run_task(processor, args):
             processor.run_slide_feature_extraction_job(
                 slide_encoder=encoder,
                 coords_dir=args.coords_dir or f'{args.mag}x_{args.patch_size}px_{args.overlap}px_overlap',
-                device=f'cuda:{args.gpu}',
+                device=args.device,
                 saveas='h5',
                 batch_limit=args.feat_batch_size if args.feat_batch_size is not None else args.batch_size,
             )
@@ -213,7 +213,14 @@ def run_task(processor, args):
 def main():
 
     args = parse_arguments()
-    args.device = f'cuda:{args.gpu}' if torch.cuda.is_available() else 'cpu'
+    if torch.cuda.is_available():
+        args.device = f'cuda:{args.gpu}'
+
+    elif torch.backends.mps.is_available():
+        args.device = 'mps'
+
+    else:
+        args.device = 'cpu'
 
     if args.wsi_cache:
         # === Parallel pipeline with caching ===

@@ -246,7 +246,6 @@ class WSI:
                 raise ValueError(f"Identified mpp is very low: mpp={mpp_x}. Most WSIs are at 20x, 40x magnfication.")
 
     @torch.inference_mode()
-    @torch.autocast(device_type="cuda", dtype=torch.float16)
     def segment_tissue(
         self,
         segmentation_model: torch.nn.Module,
@@ -649,7 +648,7 @@ class WSI:
         features = []
         for imgs, _ in dataloader:
             imgs = imgs.to(device)
-            with torch.autocast(device_type='cuda', dtype=precision, enabled=(precision != torch.float32)):
+            with torch.autocast(device_type=device.split(":")[0], dtype=precision, enabled=(precision != torch.float32)):
                 batch_features = patch_encoder(imgs)  
             features.append(batch_features.cpu().numpy())
 
@@ -753,7 +752,7 @@ class WSI:
         }
 
         # Generate slide-level features
-        with torch.autocast(device_type='cuda', enabled=(slide_encoder.precision != torch.float32)):
+        with torch.autocast(device_type=device.split(":")[0], enabled=(slide_encoder.precision != torch.float32)):
             features = slide_encoder(batch, device)
         features = features.float().cpu().numpy().squeeze()
 
