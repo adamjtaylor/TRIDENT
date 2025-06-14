@@ -1,0 +1,87 @@
+# Operating System Files
+.DS_Store
+Thumbs.db
+*.swp
+*.lock
+Desktop.ini
+
+# IDE and Editor Files
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+.project
+.classpath
+.settings/
+*.code-workspace
+
+# Build and Dependency Directories
+node_modules/
+bower_components/
+dist/
+build/
+target/
+out/
+bin/
+obj/
+lib/
+
+# Package Manager Files
+npm-debug.log
+yarn-error.log
+yarn-debug.log
+package-lock.json
+yarn.lock
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.env
+.venv
+env.bak/
+venv.bak/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Java
+*.class
+*.jar
+*.war
+*.ear
+*.log
+
+# Logs and Databases
+*.log
+*.sql
+*.sqlite
+*.sqlite3
+*.db
+
+# Compiled Source
+*.com
+*.class
+*.dll
+*.exe
+*.o
+*.so
+
+# Temporary Files
+*.bak
+*.tmp
+*~
+*.swp
+*.swo
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Project-specific files (add as needed)
+# config.json
+# secrets.yaml
