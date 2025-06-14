@@ -92,7 +92,7 @@ def process_slide(args):
     print("Extracting features from patches...")
     encoder = encoder_factory(args.patch_encoder)
     encoder.eval()
-    encoder.to(f"cuda:{args.gpu}")
+    encoder.to(args.device)
     features_path = features_dir = os.path.join(save_coords, "features_{}".format(args.patch_encoder))
     slide.extract_patch_features(
         patch_encoder=encoder,
@@ -116,7 +116,7 @@ def main():
 
     else:
         args.device = "cpu"
-        
+
     process_slide(args)
 
 
