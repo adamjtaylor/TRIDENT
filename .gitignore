@@ -4,6 +4,8 @@ Thumbs.db
 *.swp
 *.lock
 Desktop.ini
+/test_data
+/trident_processed
 
 # IDE and Editor Files
 .idea/
