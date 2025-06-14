@@ -221,6 +221,7 @@ def main():
 
     else:
         args.device = 'cpu'
+    print(f"[MAIN] Using device: {args.device}")
 
     if args.wsi_cache:
         # === Parallel pipeline with caching ===

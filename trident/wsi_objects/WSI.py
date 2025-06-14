@@ -254,7 +254,7 @@ class WSI:
         holes_are_tissue: bool = True,
         job_dir: Optional[str] = None,
         batch_size: int = 16,
-        device: str = 'cuda:0',
+        device: str = 'auto',  # Changed default from 'cuda:0' to 'auto'
         verbose=False
     ) -> str:
         """
@@ -275,7 +275,7 @@ class WSI:
         batch_size : int, optional
             Batch size for processing patches. Defaults to 16.
         device (str): 
-            The computation device to use (e.g., 'cuda:0' for GPU or 'cpu' for CPU).
+            The computation device to use ('auto', 'cuda:0', 'mps', 'cpu'). 'auto' will select the best available.
         verbose: bool, optional:
             Whenever to print segmentation progress. Defaults to False.
 
@@ -292,7 +292,19 @@ class WSI:
         """
 
         self._lazy_initialize()
-        segmentation_model.to(device)
+        
+        # Auto-detect best available device if set to 'auto'
+        if device == 'auto':
+            if torch.cuda.is_available():
+                device = 'cuda:0'
+            elif hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
+                device = 'mps'
+            else:
+                device = 'cpu'
+        
+        print(f"Using device: {device} for tissue segmentation")
+        
+        segmentation_model.to(device)  # Fixed: use the device parameter, not args.device
         max_dimension = 1000
         if self.width > self.height:
             thumbnail_width = max_dimension
