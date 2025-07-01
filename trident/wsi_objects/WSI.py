@@ -2,6 +2,7 @@ from __future__ import annotations
 import numpy as np
 from PIL import Image
 import os 
+import sys
 import warnings
 import torch 
 from typing import List, Tuple, Optional, Literal
@@ -246,7 +247,6 @@ class WSI:
                 raise ValueError(f"Identified mpp is very low: mpp={mpp_x}. Most WSIs are at 20x, 40x magnfication.")
 
     @torch.inference_mode()
-    @torch.autocast(device_type="cuda", dtype=torch.float16)
     def segment_tissue(
         self,
         segmentation_model: torch.nn.Module,
@@ -254,7 +254,7 @@ class WSI:
         holes_are_tissue: bool = True,
         job_dir: Optional[str] = None,
         batch_size: int = 16,
-        device: str = 'cuda:0',
+        device: str = 'auto',  # Changed default from 'cuda:0' to 'auto'
         verbose=False
     ) -> str:
         """
@@ -275,7 +275,7 @@ class WSI:
         batch_size : int, optional
             Batch size for processing patches. Defaults to 16.
         device (str): 
-            The computation device to use (e.g., 'cuda:0' for GPU or 'cpu' for CPU).
+            The computation device to use ('auto', 'cuda:0', 'mps', 'cpu'). 'auto' will select the best available.
         verbose: bool, optional:
             Whenever to print segmentation progress. Defaults to False.
 
@@ -292,7 +292,19 @@ class WSI:
         """
 
         self._lazy_initialize()
-        segmentation_model.to(device)
+        
+        # Auto-detect best available device if set to 'auto'
+        if device == 'auto':
+            if torch.cuda.is_available():
+                device = 'cuda:0'
+            elif hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
+                device = 'mps'
+            else:
+                device = 'cpu'
+        
+        print(f"Using device: {device} for tissue segmentation")
+        
+        segmentation_model.to(device)  # Fixed: use the device parameter, not args.device
         max_dimension = 1000
         if self.width > self.height:
             thumbnail_width = max_dimension
@@ -313,7 +325,14 @@ class WSI:
         precision = segmentation_model.precision
         eval_transforms = segmentation_model.eval_transforms
         dataset = WSIPatcherDataset(patcher, eval_transforms)
-        dataloader = DataLoader(dataset, batch_size=batch_size, num_workers=get_num_workers(batch_size, max_workers=self.max_workers), pin_memory=True)
+        # dataloader = DataLoader(dataset, batch_size=batch_size, num_workers=get_num_workers(batch_size, max_workers=self.max_workers), pin_memory=True)
+        if sys.platform == "linux":
+            dataloader = DataLoader(dataset, 
+                                    batch_size=batch_size, 
+                                    num_workers=get_num_workers(batch_size, max_workers=self.max_workers), 
+                                    pin_memory=True)  
+        else:
+            dataloader = DataLoader(dataset, batch_size=batch_size, pin_memory=True)
         # dataloader = DataLoader(dataset, batch_size=batch_size, num_workers=0, pin_memory=True)
 
         mpp_reduction_factor = self.mpp / destination_mpp
@@ -643,13 +662,20 @@ class WSI:
             pil=True,
         )
         dataset = WSIPatcherDataset(patcher, patch_transforms)
-        dataloader = DataLoader(dataset, batch_size=batch_limit, num_workers=get_num_workers(batch_limit, max_workers=self.max_workers), pin_memory=True)
+        #dataloader = DataLoader(dataset, batch_size=batch_limit, num_workers=get_num_workers(batch_limit, max_workers=self.max_workers), pin_memory=True)
+        if sys.platform == "linux":
+            dataloader = DataLoader(dataset, 
+                                    batch_size=batch_limit, 
+                                    num_workers=get_num_workers(batch_limit, max_workers=self.max_workers), 
+                                    pin_memory=True)  
+        else:
+            dataloader = DataLoader(dataset, batch_size=batch_limit, pin_memory=True)
         # dataloader = DataLoader(dataset, batch_size=batch_limit, num_workers=0, pin_memory=True)
 
         features = []
         for imgs, _ in dataloader:
             imgs = imgs.to(device)
-            with torch.autocast(device_type='cuda', dtype=precision, enabled=(precision != torch.float32)):
+            with torch.autocast(device_type=device.split(":")[0], dtype=precision, enabled=(precision != torch.float32)):
                 batch_features = patch_encoder(imgs)  
             features.append(batch_features.cpu().numpy())
 
@@ -753,7 +779,7 @@ class WSI:
         }
 
         # Generate slide-level features
-        with torch.autocast(device_type='cuda', enabled=(slide_encoder.precision != torch.float32)):
+        with torch.autocast(device_type=device.split(":")[0], enabled=(slide_encoder.precision != torch.float32)):
             features = slide_encoder(batch, device)
         features = features.float().cpu().numpy().squeeze()
 
